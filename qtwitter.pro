@@ -1,6 +1,7 @@
 TEMPLATE = app
 TARGET = qtwitter
-SOURCES += src/main.cpp \
+SOURCES += qtwitter_reg.rss \
+    src/main.cpp \
     src/mainwindow.cpp \
     src/statusedit.cpp \
     src/xmlparser.cpp \
@@ -29,7 +30,9 @@ FORMS += ui/mainwindow.ui \
     ui/tweet.ui
 RESOURCES += res/resources.qrc
 QT += network \
-    xml
+    xml \
+    core \
+    gui
 TRANSLATIONS += loc/qtwitter_pl.ts \
     loc/qtwitter_ca.ts \
     loc/qtwitter_es.ts
@@ -37,4 +40,6 @@ UI_DIR = tmp
 MOC_DIR = tmp
 RCC_DIR = tmp
 OBJECTS_DIR = tmp
-INCLUDEPATH = inc
+INCLUDEPATH += inc \
+    tmp
+symbian:TARGET.UID3 = 0xED2A9ABC

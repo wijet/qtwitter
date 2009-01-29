@@ -10,14 +10,13 @@ MainWindow::MainWindow() : QWidget(), model( 0, 0, this )
   ui.setupUi( this );
   ui.countdownLabel->setToolTip( ui.countdownLabel->text() + tr( " characters left" ) );
   filter = new StatusFilter();
-  fm = new QFontMetrics( ui.statusListView->font() );
   settingsDialog = new Settings( this );
-  loadConfig();
+  /*loadConfig();*/
   ui.statusEdit->installEventFilter( filter );
   ui.statusListView->setModel( &model );
 //  proxy.setType( QNetworkProxy::NoProxy );
 
-  menu = new QMenu( this );
+/*  menu = new QMenu( this );
   QAction *openaction = new QAction("Open", this);
   QAction *closeaction = new QAction("Close", this);
   QAction *deleteaction = new QAction("Delete", this);
@@ -27,7 +26,7 @@ MainWindow::MainWindow() : QWidget(), model( 0, 0, this )
   menu->addAction(closeaction);
   menu->addAction(deleteaction);
   menu->addAction(aboutaction);
-
+*/
   qDebug() << qRegisterMetaType<ListOfEntries>( "ListOfEntries" );
   qDebug() << qRegisterMetaType<MapStringImage>( "MapStringImage" );
 
@@ -40,23 +39,19 @@ MainWindow::MainWindow() : QWidget(), model( 0, 0, this )
   connect( &threadingEngine, SIGNAL( errorMessage( const QString& ) ), this, SLOT( popupError( const QString& ) ) );
   connect( &threadingEngine, SIGNAL( readyToDisplay( const ListOfEntries&, const MapStringImage& ) ), this, SLOT( display( const ListOfEntries&, const MapStringImage& ) ) );
   connect( ui.statusListView, SIGNAL( contextMenuRequested() ), this, SLOT( popupMenu() ) );
-  connect( settingsDialog, SIGNAL( settingsOK() ), this, SLOT( saveConfig() ) );
+  //connect( settingsDialog, SIGNAL( settingsOK() ), this, SLOT( saveConfig() ) );
   //updateTweets();
 }
 
 void MainWindow::popupMenu() {
-  menu->exec( QCursor::pos() );
+  //menu->exec( QCursor::pos() );
 }
 
 MainWindow::~MainWindow() {
-  saveConfig();
+  //saveConfig();
   if ( filter ) {
     delete filter;
     filter = NULL;
-  }
-  if ( fm ) {
-    delete fm;
-    fm = NULL;
   }
 }
 
@@ -133,7 +128,7 @@ void MainWindow::loadConfig() {
 #if defined Q_WS_X11 || defined Q_WS_MAC
   QSettings settings( "ayoy", "qTwitter" );
 #endif
-#if defined Q_WS_WIN
+#if defined Q_WS_WIN || defined Q_WS_S60
   QSettings settings( QSettings::IniFormat, QSettings::UserScope, "ayoy", "qTwitter" );
 #endif
   settings.beginGroup( "MainWindow" );
@@ -162,7 +157,7 @@ void MainWindow::saveConfig() {
 #if defined Q_WS_X11 || defined Q_WS_MAC
   QSettings settings( "ayoy", "qTwitter" );
 #endif
-#if defined Q_WS_WIN
+#if defined Q_WS_WIN || defined Q_WS_S60
   QSettings settings( QSettings::IniFormat, QSettings::UserScope, "ayoy", "qTwitter" );
 #endif
   qDebug() << size().width() << size().height();

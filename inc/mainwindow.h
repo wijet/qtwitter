@@ -39,7 +39,6 @@ private:
   QMenu *menu;
   Core threadingEngine;
   QStandardItemModel model;
-  QFontMetrics *fm;
   StatusFilter *filter;
   Settings *settingsDialog;
   Ui::MainWindow ui;
