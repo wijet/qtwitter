@@ -54,7 +54,7 @@ void AboutDialog::populateAuthors()
                          "<body style=\" font-family:'Lucida Grande'; font-size:10pt; font-weight:400; font-style:normal;\">" );
 
   authorsHtml.append( QString( "<p><b>%1</b></p>"
-                               "<p style=\"-qt-paragraph-type:empty; \"></p>" ).arg( tr( "Development team as for 0.7.0:" ) ) );
+                               "<p style=\"-qt-paragraph-type:empty; \"></p>" ).arg( tr( "Development team as for 0.7.1:" ) ) );
 
   authorsHtml.append( contributor( "Dominik Kapusta", "d@ayoy.net", tr( "Application concept and main development" ) ) );
   authorsHtml.append( contributor( "Anna Nowak", "wiorka@gmail.com", tr( "API library improvements and themes revisiting" ) ) );
@@ -101,9 +101,9 @@ void AboutDialog::populateCredits()
   creditsHtml.append( QString( "<br/><p><b>%1</b></p>"
                                "<p style=\"-qt-paragraph-type:empty; \"></p>" ).arg( tr( "Releasing:" ) ) );
   creditsHtml.append( contributor( "Markos Chandras", "hwoarang@gentoo.org", "Gentoo" ) );
-  creditsHtml.append( contributor( "Eugene Pivnev", "ti.eugene@gmail.com", "Fedora, openSuse, Mandriva" ) );
+  creditsHtml.append( contributor( "Eugene Pivnev", "ti.eugene@gmail.com", "Mandriva, openSuse" ) );
   creditsHtml.append( contributor( "Nick B", "shirakawasuna@gmail.com", "Arch" ) );
-  creditsHtml.append( contributor( "Dominik Kapusta", "d@ayoy.net", "Ubuntu/Debian, MacOS X, Windows" ) );
+  creditsHtml.append( contributor( "Dominik Kapusta", "d@ayoy.net", "Ubuntu/Debian, Fedora, MacOS X, Windows" ) );
 
   creditsHtml.append(   "</body>"
                       "</html>" );

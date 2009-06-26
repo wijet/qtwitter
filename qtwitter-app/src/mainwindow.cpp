@@ -41,6 +41,7 @@
 #include "accountsdelegate.h"
 #include "accountscontroller.h"
 #include "configfile.h"
+#include "updater.h"
 
 extern ConfigFile settings;
 
@@ -77,6 +78,9 @@ MainWindow::MainWindow( QWidget *parent ) :
 #ifdef Q_WS_HILDON
   createHildonMenu();
 #endif
+  if ( settings.value( "Network/updates/check", true ).toBool() ) {
+    silentCheckForUpdates();
+  }
 }
 
 MainWindow::~MainWindow() {
@@ -106,7 +110,7 @@ void MainWindow::createConnections()
   connect( filter, SIGNAL( enterPressed() ), this, SLOT( sendStatus() ) );
   connect( filter, SIGNAL( escPressed() ), ui.statusEdit, SLOT( cancelEditing() ) );
   connect( filter, SIGNAL( shortenUrlPressed() ), ui.statusEdit, SLOT( shortenUrl() ));
-  connect( this, SIGNAL(addReplyString(QString,int)), ui.statusEdit, SLOT(addReplyString(QString,int)) );
+  connect( this, SIGNAL(addReplyString(QString,quint64)), ui.statusEdit, SLOT(addReplyString(QString,quint64)) );
   connect( this, SIGNAL(addRetweetString(QString)), ui.statusEdit, SLOT(addRetweetString(QString)) );
   connect( ui.statusEdit, SIGNAL( shortenUrl( QString ) ), this, SIGNAL( shortenUrl( QString ) ) );
 
@@ -171,6 +175,7 @@ void MainWindow::createButtonMenu()
   gototwitterAction = new QAction( tr( "Go to Twitter" ), buttonMenu );
   gotoidenticaAction = new QAction( tr( "Go to Identi.ca" ), buttonMenu );
   gototwitpicAction = new QAction( tr( "Go to TwitPic" ), buttonMenu );
+  checkforupdatesAction = new QAction( tr( "Check for updates" ), buttonMenu );
   aboutAction = new QAction( tr( "About qTwitter..." ), buttonMenu );
   quitAction = new QAction( tr( "Quit" ), buttonMenu );
   quitAction->setShortcut( QKeySequence( Qt::CTRL + Qt::Key_Q ) );
@@ -194,6 +199,7 @@ void MainWindow::createButtonMenu()
   connect( gototwitterAction, SIGNAL(triggered()), mapper, SLOT(map()) );
   connect( gototwitpicAction, SIGNAL(triggered()), mapper, SLOT(map()) );
   connect( mapper, SIGNAL(mapped(QString)), this, SLOT(emitOpenBrowser(QString)) );
+  connect( checkforupdatesAction, SIGNAL(triggered()), this, SLOT(checkForUpdates()) );
   connect( aboutAction, SIGNAL(triggered()), this, SLOT(about()) );
 
   buttonMenu->addAction( newstatusAction );
@@ -203,6 +209,7 @@ void MainWindow::createButtonMenu()
   buttonMenu->addAction( gotoidenticaAction );
   buttonMenu->addAction( gototwitpicAction );
   buttonMenu->addSeparator();
+  buttonMenu->addAction( checkforupdatesAction );
   buttonMenu->addAction( aboutAction );
   buttonMenu->addAction( quitAction );
   ui.moreButton->setMenu( buttonMenu );
@@ -221,7 +228,7 @@ int MainWindow::getScrollBarWidth()
 void MainWindow::setupAccounts( const QList<Account> &accounts, int publicTimeline )
 {
   ui.accountsComboBox->clear();
-
+  ui.statusEdit->setEnabled( false );
   foreach ( Account account, accounts ) {
     if ( account.isEnabled )
       ui.accountsComboBox->addItem( QString( "%1 @%2" ).arg( account.login, Account::networkToString( account.network ) ) );
@@ -229,7 +236,7 @@ void MainWindow::setupAccounts( const QList<Account> &accounts, int publicTimeli
 
   if ( ( publicTimeline == AccountsController::PT_NONE && accounts.size() < 2 ) || accounts.isEmpty() ) {
     ui.accountsComboBox->setVisible( false );
-    if ( !accounts.isEmpty() ) {
+    if ( !accounts.isEmpty() && accounts.at(0).isEnabled ) {
       ui.statusEdit->setEnabled( true );
       emit switchModel( accounts.at(0).network, accounts.at(0).login );
     } else if ( publicTimeline != AccountsController::PT_NONE ) {
@@ -495,6 +502,60 @@ void MainWindow::emitOpenBrowser( QString address )
   emit openBrowser( QUrl( address ) );
 }
 
+void MainWindow::checkForUpdates()
+{
+  Updater *updater = new Updater( this );
+  connect( updater, SIGNAL(updateChecked(bool,QString)), this, SLOT(readUpdateReply(bool,QString)) );
+  updater->checkForUpdate();
+}
+
+void MainWindow::silentCheckForUpdates()
+{
+  Updater *updater = new Updater( this );
+  connect( updater, SIGNAL(updateChecked(bool,QString)), this, SLOT(silentReadUpdateReply(bool,QString)) );
+  updater->checkForUpdate();
+}
+
+void MainWindow::readUpdateReply( bool available, const QString &version )
+{
+  settings.setValue( "Network/updates/last", QDateTime::currentDateTime().toString( Qt::SystemLocaleShortDate ) );
+  QMessageBox *messageBox;
+  if ( available ) {
+    messageBox = new QMessageBox( QMessageBox::Information, tr( "Update available" ),
+                     tr( "An update to qTwitter is available!" ),
+                     QMessageBox::Close, this );
+    messageBox->setInformativeText( tr( "Current version is %1.<br>Download it from %2" )
+                                    .arg( version, "<a href='http://www.qt-apps.org/content/show.php/qTwitter?content=99087'>"
+                                                   "Qt-Apps.org</a>" ) );
+  } else {
+    messageBox = new QMessageBox( QMessageBox::Information, tr( "No updates available" ),
+                     tr( "Sorry, no updates for qTwitter are currently available" ),
+                     QMessageBox::Close, this );
+  }
+  messageBox->setButtonText( QMessageBox::Close, tr( "Close" ) );
+  messageBox->exec();
+  messageBox->deleteLater();
+  sender()->deleteLater();
+}
+
+void MainWindow::silentReadUpdateReply( bool available, const QString &version )
+{
+  settings.setValue( "Network/updates/last", QDateTime::currentDateTime().toString( Qt::SystemLocaleShortDate ) );
+  if ( available ) {
+    QMessageBox *messageBox;
+    messageBox = new QMessageBox( QMessageBox::Information, tr( "Update available" ),
+                     tr( "An update to qTwitter is available!" ),
+                     QMessageBox::Close, this );
+    messageBox->setInformativeText( tr( "Current version is %1.<br>Download it from %2" )
+                                    .arg( version, "<a href='http://www.qt-apps.org/content/show.php/qTwitter?content=99087'>"
+                                                   "Qt-Apps.org</a>" ) );
+    messageBox->setButtonText( QMessageBox::Close, tr( "Close" ) );
+    messageBox->exec();
+    messageBox->deleteLater();
+  }
+  sender()->deleteLater();
+}
+
 void MainWindow::changeListBackgroundColor(const QColor &newColor )
 {
   QPalette palette( ui.statusListView->palette() );
@@ -531,6 +592,7 @@ void MainWindow::retranslateUi()
   gototwitterAction->setText( tr( "Go to Twitter" ) );
   gotoidenticaAction->setText( tr( "Go to Identi.ca" ) );
   gototwitpicAction->setText( tr( "Go to TwitPic" ) );
+  checkforupdatesAction->setText( tr( "Check for updates" ) );
   aboutAction->setText( tr( "About qTwitter..." ) );
   quitAction->setText( tr( "Quit" ) );
 }
@@ -690,7 +752,7 @@ void MainWindow::statusGotohomepageAction()
     Emitted to open a dialog for uploading a photo to TwitPic.
 */
 
-/*! \fn void MainWindow::post( const QByteArray& status, int inReplyTo = -1 )
+/*! \fn void MainWindow::post( const QByteArray& status, quint64 inReplyTo = -1 )
     Emitted to post a status update. Assigned to pressing Enter inside the status edit field.
     \param status A status to be posted.
     \param inReplyTo In case the status is a reply - optional id of the existing status to which the reply is posted.
@@ -706,7 +768,7 @@ void MainWindow::statusGotohomepageAction()
     Emitted when settings button pressed, requests opening the settings dialog.
 */
 
-/*! \fn void MainWindow::addReplyString( const QString& user, int inReplyTo )
+/*! \fn void MainWindow::addReplyString( const QString& user, quint64 inReplyTo )
     Works as a proxy between StatusWidget class instance and status edit field. Passes the request
     to initiate editing a reply.
     \param user Login of a User to whom the current User replies.

@@ -70,10 +70,10 @@ public slots:
 signals:
   void updateStatuses();
   void openTwitPicDialog();
-  void post( TwitterAPI::SocialNetwork network, const QString &login, QString status, int inReplyTo );
+  void post( TwitterAPI::SocialNetwork network, const QString &login, QString status, quint64 inReplyTo );
   void openBrowser( QUrl address );
   void settingsDialogRequested();
-  void addReplyString( const QString& user, int inReplyTo );
+  void addReplyString( const QString& user, quint64 inReplyTo );
   void addRetweetString( QString message );
   void resizeView( int width, int oldWidth );
   void switchModel( TwitterAPI::SocialNetwork network, const QString &login );
@@ -92,6 +92,10 @@ protected:
 private slots:
   void iconActivated( QSystemTrayIcon::ActivationReason reason );
   void emitOpenBrowser( QString address );
+  void checkForUpdates();
+  void silentCheckForUpdates();
+  void readUpdateReply( bool available, const QString &version );
+  void silentReadUpdateReply( bool available, const QString &version );
   void changeLabel();
   void sendStatus();
   void resetStatus();
@@ -115,6 +119,7 @@ private:
   QAction *gototwitterAction;
   QAction *gotoidenticaAction;
   QAction *gototwitpicAction;
+  QAction *checkforupdatesAction;
   QAction *aboutAction;
   QAction *quitAction;
   QMovie *progressIcon;

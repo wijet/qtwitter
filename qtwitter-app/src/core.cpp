@@ -23,6 +23,7 @@
 #include <QDesktopServices>
 #include <QProcess>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QDebug>
 #include <urlshortener/urlshortener.h>
 #include "core.h"
@@ -37,6 +38,10 @@
 #include "accountscontroller.h"
 #include "ui_authdialog.h"
 #include "ui_twitpicnewphoto.h"
+
+#ifdef OAUTH
+#  include <oauthwizard.h>
+#endif
 
 extern ConfigFile settings;
 
@@ -58,15 +63,21 @@ Core::Core( MainWindow *parent ) :
   connect( imageDownload, SIGNAL(imageReadyForUrl(QString,QPixmap*)), this, SLOT(setImageForUrl(QString,QPixmap*)) );
 
   twitterapi = new TwitterAPIInterface( this );
+
+#ifdef OAUTH
+  twitterapi->setConsumerKey( OAuthWizard::ConsumerKey );
+  twitterapi->setConsumerSecret( OAuthWizard::ConsumerSecret );
+#endif
+
   connect( twitterapi, SIGNAL(newEntry(TwitterAPI::SocialNetwork,QString,Entry)), this, SLOT(addEntry(TwitterAPI::SocialNetwork,QString,Entry)) );
-  connect( twitterapi, SIGNAL(deleteEntry(TwitterAPI::SocialNetwork,QString,int)), this, SLOT(deleteEntry(TwitterAPI::SocialNetwork,QString,int)) );
-  connect( twitterapi, SIGNAL(favoriteStatus(TwitterAPI::SocialNetwork,QString,int,bool)), this, SLOT(setFavorited(TwitterAPI::SocialNetwork,QString,int,bool)) );
+  connect( twitterapi, SIGNAL(deleteEntry(TwitterAPI::SocialNetwork,QString,quint64)), this, SLOT(deleteEntry(TwitterAPI::SocialNetwork,QString,quint64)) );
+  connect( twitterapi, SIGNAL(favoriteStatus(TwitterAPI::SocialNetwork,QString,quint64,bool)), this, SLOT(setFavorited(TwitterAPI::SocialNetwork,QString,quint64,bool)) );
   connect( twitterapi, SIGNAL(postDMDone(TwitterAPI::SocialNetwork,QString,TwitterAPI::ErrorCode)), this, SIGNAL(confirmDMSent(TwitterAPI::SocialNetwork,QString,TwitterAPI::ErrorCode)) );
-  connect( twitterapi, SIGNAL(deleteDMDone(TwitterAPI::SocialNetwork,QString,int,TwitterAPI::ErrorCode)), this, SLOT(deleteEntry(TwitterAPI::SocialNetwork,QString,int)) );
+  connect( twitterapi, SIGNAL(deleteDMDone(TwitterAPI::SocialNetwork,QString,quint64,TwitterAPI::ErrorCode)), this, SLOT(deleteEntry(TwitterAPI::SocialNetwork,QString,quint64)) );
   connect( twitterapi, SIGNAL(errorMessage(QString)), this, SIGNAL(errorMessage(QString)) );
   connect( twitterapi, SIGNAL(unauthorized(TwitterAPI::SocialNetwork,QString,QString)), this, SLOT(slotUnauthorized(TwitterAPI::SocialNetwork,QString,QString)) );
-  connect( twitterapi, SIGNAL(unauthorized(TwitterAPI::SocialNetwork,QString,QString,QString,int)), this, SLOT(slotUnauthorized(TwitterAPI::SocialNetwork,QString,QString,QString,int)) );
-  connect( twitterapi, SIGNAL(unauthorized(TwitterAPI::SocialNetwork,QString,QString,int,Entry::Type)), this, SLOT(slotUnauthorized(TwitterAPI::SocialNetwork,QString,QString,int,Entry::Type)) );
+  connect( twitterapi, SIGNAL(unauthorized(TwitterAPI::SocialNetwork,QString,QString,QString,quint64)), this, SLOT(slotUnauthorized(TwitterAPI::SocialNetwork,QString,QString,QString,quint64)) );
+  connect( twitterapi, SIGNAL(unauthorized(TwitterAPI::SocialNetwork,QString,QString,quint64,Entry::Type)), this, SLOT(slotUnauthorized(TwitterAPI::SocialNetwork,QString,QString,quint64,Entry::Type)) );
 
   connect( this, SIGNAL(newRequest()), SLOT(slotNewRequest()) );
   connect( twitterapi, SIGNAL(requestDone(TwitterAPI::SocialNetwork,QString,int)), this, SLOT(slotRequestDone(TwitterAPI::SocialNetwork,QString,int)) );
@@ -81,10 +92,10 @@ Core::Core( MainWindow *parent ) :
   parent->setListViewModel( statusModel );
 
   connect( statusModel, SIGNAL(openBrowser(QUrl)), this, SLOT(openBrowser(QUrl)) );
-  connect( statusModel, SIGNAL(reply(QString,int)), this, SIGNAL(addReplyString(QString,int)) );
+  connect( statusModel, SIGNAL(reply(QString,quint64)), this, SIGNAL(addReplyString(QString,quint64)) );
   connect( statusModel, SIGNAL(about()), this, SIGNAL(about()) );
-  connect( statusModel, SIGNAL(destroy(TwitterAPI::SocialNetwork,QString,int,Entry::Type)), this, SLOT(destroy(TwitterAPI::SocialNetwork,QString,int,Entry::Type)) );
-  connect( statusModel, SIGNAL(favorite(TwitterAPI::SocialNetwork,QString,int,bool)), this, SLOT(favoriteRequest(TwitterAPI::SocialNetwork,QString,int,bool)) );
+  connect( statusModel, SIGNAL(destroy(TwitterAPI::SocialNetwork,QString,quint64,Entry::Type)), this, SLOT(destroy(TwitterAPI::SocialNetwork,QString,quint64,Entry::Type)) );
+  connect( statusModel, SIGNAL(favorite(TwitterAPI::SocialNetwork,QString,quint64,bool)), this, SLOT(favoriteRequest(TwitterAPI::SocialNetwork,QString,quint64,bool)) );
   connect( statusModel, SIGNAL(postDM(TwitterAPI::SocialNetwork,QString,QString)), this, SLOT(postDMDialog(TwitterAPI::SocialNetwork,QString,QString)) );
   connect( statusModel, SIGNAL(retweet(QString)), this, SIGNAL(addRetweetString(QString)) );
   connect( statusModel, SIGNAL(markEverythingAsRead()), this, SLOT(markEverythingAsRead()) );
@@ -205,7 +216,7 @@ void Core::forceGet()
 
 void Core::get( TwitterAPI::SocialNetwork network, const QString &login, const QString &password )
 {
-  requestCount = 0;
+//  requestCount = 0;
   twitterapi->friendsTimeline( network, login, password, settings.value("Appearance/tweet count", 20).toInt() );
   emit newRequest();
   if ( accountsModel->account( network, login )->directMessages ) {
@@ -250,7 +261,7 @@ void Core::get()
     emit requestStarted();
 }
 
-void Core::post( TwitterAPI::SocialNetwork network, const QString &login, const QString &status, int inReplyTo )
+void Core::post( TwitterAPI::SocialNetwork network, const QString &login, const QString &status, quint64 inReplyTo )
 {
   twitterapi->postUpdate( network, login, accountsModel->account( network, login )->password, status, inReplyTo );
   emit newRequest();
@@ -258,7 +269,7 @@ void Core::post( TwitterAPI::SocialNetwork network, const QString &login, const 
   checkForNew = false;
 }
 
-void Core::destroy( TwitterAPI::SocialNetwork network, const QString &login, int id, Entry::Type type )
+void Core::destroy( TwitterAPI::SocialNetwork network, const QString &login, quint64 id, Entry::Type type )
 {
   if ( settings.value( "General/confirmTweetDeletion", true ).toBool() ) {
     QMessageBox *confirm = new QMessageBox( QMessageBox::Warning,
@@ -272,7 +283,11 @@ void Core::destroy( TwitterAPI::SocialNetwork network, const QString &login, int
     if ( result == QMessageBox::Cancel )
       return;
   }
+  destroyDontAsk( network, login, id, type );
+}
 
+void Core::destroyDontAsk( TwitterAPI::SocialNetwork network, const QString &login, quint64 id, Entry::Type type )
+{
   checkForNew = false;
   if ( type == Entry::Status ) {
     twitterapi->deleteUpdate( network, login, accountsModel->account( network, login )->password, id );
@@ -283,7 +298,7 @@ void Core::destroy( TwitterAPI::SocialNetwork network, const QString &login, int
   emit requestStarted();
 }
 
-void Core::favoriteRequest( TwitterAPI::SocialNetwork network, const QString &login, int id, bool favorited )
+void Core::favoriteRequest( TwitterAPI::SocialNetwork network, const QString &login, quint64 id, bool favorited )
 {
   qDebug() << "Core::favoriteRequest()";
   if ( favorited )
@@ -304,9 +319,14 @@ void Core::postDM( TwitterAPI::SocialNetwork network, const QString &login, cons
 
 void Core::uploadPhoto( const QString &login, QString photoPath, QString status )
 {
-  twitpicUpload = new TwitPicEngine( this );
-  qDebug() << "uploading photo";
-  twitpicUpload->postContent( login, accountsModel->account( TwitterAPI::SOCIALNETWORK_TWITTER, login )->password, photoPath, status );
+  bool ok = false;
+  QString password = QInputDialog::getText( 0, tr( "Enter password" ), tr( "Enter your Twitter password.<br>We're not storing it anywhere" ),
+                                            QLineEdit::Password, QString(), &ok );
+  if ( ok && !password.isEmpty() ) {
+    twitpicUpload = new TwitPicEngine( this );
+    qDebug() << "uploading photo";
+    twitpicUpload->postContent( login, password, photoPath, status );
+  }
 }
 
 void Core::abortUploadPhoto()
@@ -449,7 +469,7 @@ void Core::addEntry( TwitterAPI::SocialNetwork network, const QString &login, En
   }
 }
 
-void Core::deleteEntry( TwitterAPI::SocialNetwork network, const QString &login, int id )
+void Core::deleteEntry( TwitterAPI::SocialNetwork network, const QString &login, quint64 id )
 {
   Account *account = accountsModel->account( network, login );
   if ( statusLists.contains( *account ) ) {
@@ -458,7 +478,7 @@ void Core::deleteEntry( TwitterAPI::SocialNetwork network, const QString &login,
   }
 }
 
-void Core::setFavorited( TwitterAPI::SocialNetwork network, const QString &login, int id, bool favorited )
+void Core::setFavorited( TwitterAPI::SocialNetwork network, const QString &login, quint64 id, bool favorited )
 {
   Account *account = accountsModel->account( network, login );
   if ( statusLists.contains( *account ) ) {
@@ -484,17 +504,19 @@ void Core::slotUnauthorized( TwitterAPI::SocialNetwork network, const QString &l
 {
   Q_UNUSED(password);
   Account *account = accountsModel->account( network, login );
-  if ( !retryAuthorizing( account, TwitterAPI::ROLE_FRIENDS_TIMELINE ) )
-    return;
+  requestCount--;
   if ( account->directMessages )
     requestCount--;
+  if ( !retryAuthorizing( account, TwitterAPI::ROLE_FRIENDS_TIMELINE ) )
+    return;
   get( network, account->login, account->password );
 }
 
-void Core::slotUnauthorized( TwitterAPI::SocialNetwork network, const QString &login, const QString &password, const QString &status, int inReplyToId )
+void Core::slotUnauthorized( TwitterAPI::SocialNetwork network, const QString &login, const QString &password, const QString &status, quint64 inReplyToId )
 {
   Q_UNUSED(password);
   Account *account = accountsModel->account( network, login );
+  requestCount--;
   if ( !retryAuthorizing( account, TwitterAPI::ROLE_POST_UPDATE ) )
     return;
   post( network, account->login, status, inReplyToId );
@@ -504,18 +526,20 @@ void Core::slotUnauthorized( TwitterAPI::SocialNetwork network, const QString &l
 {
   Q_UNUSED(password);
   Account *account = accountsModel->account( network, login );
+  requestCount--;
   if ( !retryAuthorizing( account, TwitterAPI::ROLE_POST_DM ) )
     return;
   postDM( network, account->login, screenName, text );
 }
 
-void Core::slotUnauthorized( TwitterAPI::SocialNetwork network, const QString &login, const QString &password, int destroyId, Entry::Type type )
+void Core::slotUnauthorized( TwitterAPI::SocialNetwork network, const QString &login, const QString &password, quint64 destroyId, Entry::Type type )
 {
   Q_UNUSED(password);
   Account *account = accountsModel->account( network, login );
+  requestCount--;
   if ( !retryAuthorizing( account, TwitterAPI::ROLE_DELETE_UPDATE ) )
     return;
-  destroy( network, account->login, destroyId, type );
+  destroyDontAsk( network, account->login, destroyId, type );
 }
 
 void Core::setupStatusLists()
@@ -593,6 +617,7 @@ bool Core::retryAuthorizing( Account *account, int role )
 {
   if ( !account )
     return false;
+
   Core::AuthDialogState state = authDataDialog( account );
   switch ( state ) {
   case Core::STATE_ACCEPTED:
@@ -627,7 +652,7 @@ bool Core::retryAuthorizing( Account *account, int role )
 void Core::slotNewRequest()
 {
   requestCount++;
-  qDebug() << requestCount;
+  qDebug() << requestCount << "request(s) pending";
 }
 
 void Core::resetRequestsCount()
@@ -760,7 +785,7 @@ void Core::shortenUrl( const QString &url )
     \sa post(), destroyStatus(), authDataDialog()
 */
 
-/*! \fn void Core::post( const QByteArray &status, int inReplyTo = -1 )
+/*! \fn void Core::post( const QByteArray &status, quint64 inReplyTo = -1 )
     Sends a new Status with a content given by \a status. If user's authenticaton
     data is missing, pops up an authentication dialog.
     \param status New Status's text.

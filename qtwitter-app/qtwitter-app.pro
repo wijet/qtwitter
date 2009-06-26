@@ -4,8 +4,15 @@ TARGET = qtwitter
 # sets the TOP variable to the root source code dir
 include(../qtwitter.pri)
 DESTDIR = $${TOP}
+
 include($${TOP}/twitterapi/twitterapi.pri)
 include($${TOP}/urlshortener/urlshortener.pri)
+
+contains( DEFINES, OAUTH ) {
+    include(src/oauth/oauth.pri)
+    CONFIG += oauth
+}
+
 include(src/accounts/accounts.pri)
 include(src/qticonloader/qticonloader.pri)
 QT += network \
@@ -27,7 +34,8 @@ SOURCES += src/main.cpp \
     src/userinfopopup.cpp \
     src/dmdialog.cpp \
     src/configfile.cpp \
-    src/themes.cpp
+    src/themes.cpp \
+    src/updater.cpp
 HEADERS += src/mainwindow.h \
     src/statusedit.h \
     src/imagedownload.h \
@@ -47,7 +55,8 @@ HEADERS += src/mainwindow.h \
     src/userinfopopup.h \
     src/dmdialog.h \
     src/configfile.h \
-    src/themes.h
+    src/themes.h \
+    src/updater.h
 FORMS += ui/mainwindow.ui \
     ui/authdialog.ui \
     ui/settings.ui \
@@ -63,6 +72,7 @@ TRANSLATIONS += loc/qtwitter_ca_ES.ts \
     loc/qtwitter_de_DE.ts \
     loc/qtwitter_es_ES.ts \
     loc/qtwitter_ja_JP.ts \
+    loc/qtwitter_it_IT.ts \
     loc/qtwitter_fr_FR.ts \
     loc/qtwitter_pl_PL.ts \
     loc/qtwitter_pt_BR.ts
@@ -135,5 +145,6 @@ else:win32 {
     RC_FILE = win32/qtwitter.rc
     LIBS += -L$${TOP} \
         $$TWITTERAPI_LIB \
-        $$URLSHORTENER_LIB
+        $$URLSHORTENER_LIB \
+        $$QOAUTH_LIB
 }
