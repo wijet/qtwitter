@@ -49,7 +49,6 @@ public:
   StatusModel( StatusListView *parentListView, QObject *parent = 0 );
 
   StatusWidget* currentStatus();
-  void deselectCurrentIndex();
   void setTheme( const ThemeData &theme );
   void setStatusList( StatusList *statusList );
   StatusList * getStatusList() const;
@@ -64,6 +63,7 @@ public slots:
   void updateImage( int ind );
   void removeStatus( int ind );
   void markAllAsRead();
+  void deselectCurrentIndex();
 
   void sendDeleteRequest( quint64 id, Entry::Type type );
   void sendFavoriteRequest( quint64 id, bool favorited );

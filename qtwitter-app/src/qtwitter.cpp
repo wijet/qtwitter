@@ -34,13 +34,12 @@
 #include "settings.h"
 #include "account.h"
 
-//extern ConfigFile settings;
-
-Qtwitter::Qtwitter( QWidget *parent )
-  : MainWindow( parent )
+Qtwitter::Qtwitter( QWidget *parent ) :
+    MainWindow( parent ),
+    twitpic(0)
 {
   connect( this, SIGNAL(switchModel(TwitterAPI::SocialNetwork,QString)), SLOT(setCurrentModel(TwitterAPI::SocialNetwork,QString)) );
-  connect( this, SIGNAL(switchToPublicTimelineModel(TwitterAPI::SocialNetwork)), SLOT(setPublicTimelineModel(TwitterAPI::SocialNetwork)) );
+  connect( this, SIGNAL(twitPicRequested()), SLOT(openTwitPic()) );
 
   core = new Core( this );
 
@@ -52,7 +51,7 @@ Qtwitter::Qtwitter( QWidget *parent )
   connect( this, SIGNAL(iconStopped()), core, SLOT(resetRequestsCount()) );
   connect( this, SIGNAL(statusMarkeverythingasreadAction()), core, SLOT(markEverythingAsRead()) );
   connect( core, SIGNAL(pauseIcon()), this, SLOT(pauseIcon()) );
-  connect( core, SIGNAL(accountsUpdated(QList<Account>,int)), this, SLOT(setupAccounts(QList<Account>,int)) );
+  connect( core, SIGNAL(accountsUpdated(QList<Account>)), this, SLOT(setupAccounts(QList<Account>)) );
   connect( core, SIGNAL(urlShortened(QString)), this, SLOT(replaceUrl(QString)));
   connect( core, SIGNAL(about()), this, SLOT(about()) );
   connect( core, SIGNAL(addReplyString(QString,quint64)), this, SIGNAL(addReplyString(QString,quint64)) );
@@ -63,15 +62,8 @@ Qtwitter::Qtwitter( QWidget *parent )
   if ( QSystemTrayIcon::supportsMessages() )
     connect( core, SIGNAL(sendNewsReport(QString)), this, SLOT(popupMessage(QString)) );
 
-  twitpic = new TwitPicView( this );
-  connect( twitpic, SIGNAL(uploadPhoto(QString,QString,QString)), core, SLOT(uploadPhoto(QString,QString,QString)) );
-  connect( twitpic, SIGNAL(abortUpload()), core, SLOT(abortUploadPhoto()) );
-  connect( this, SIGNAL(openTwitPicDialog()), twitpic, SLOT(show()) );
-  connect( core, SIGNAL(twitPicResponseReceived()), twitpic, SLOT(resetForm()) );
-  connect( core, SIGNAL(twitPicDataSendProgress(qint64,qint64)), twitpic, SLOT(showUploadProgress(qint64,qint64)) );
-  connect( core, SIGNAL(accountsUpdated(QList<Account>,int)), twitpic, SLOT(setupAccounts(QList<Account>)) );
 
-  settingsDialog = new Settings( this, core, twitpic, this );
+  settingsDialog = new Settings( this, core, this );
   connect( this, SIGNAL(settingsDialogRequested()), settingsDialog, SLOT( show() ) );
 
   QSignalMapper *mapper = new QSignalMapper( this );
@@ -85,11 +77,16 @@ void Qtwitter::setCurrentModel( TwitterAPI::SocialNetwork network, const QString
   core->setModelData( network, login );
 }
 
-//  this is to avoid relying on translation files
-//  caused by a bug in tr() method
-void Qtwitter::setPublicTimelineModel( TwitterAPI::SocialNetwork network )
+void Qtwitter::openTwitPic()
 {
-  // TODO: probably won't work
-  // UPDATE: works! :)
-  core->setModelData( network, TwitterAPI::PUBLIC_TIMELINE );
+  if ( !twitpic ) {
+    twitpic = new TwitPicView( this );
+    connect( twitpic, SIGNAL(uploadPhoto(QString,QString,QString)), core, SLOT(uploadPhoto(QString,QString,QString)) );
+    connect( twitpic, SIGNAL(abortUpload()), core, SLOT(abortUploadPhoto()) );
+    connect( core, SIGNAL(twitPicResponseReceived()), twitpic, SLOT(resetForm()) );
+    connect( core, SIGNAL(twitPicDataSendProgress(qint64,qint64)), twitpic, SLOT(showUploadProgress(qint64,qint64)) );
+    connect( core, SIGNAL(accountsUpdated(QList<Account>)), twitpic, SLOT(setupAccounts(QList<Account>)) );
+    twitpic->setupAccounts( core->twitpicLogins() );
+  }
+  twitpic->show();
 }

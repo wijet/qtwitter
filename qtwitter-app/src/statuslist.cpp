@@ -22,6 +22,60 @@
 #include <QPixmap>
 #include "statuslist.h"
 
+QDataStream& operator<<( QDataStream & out, const Status &status )
+{
+  out << status.entry;
+  out << status.image;
+  out << status.state;
+  return out;
+}
+
+QDataStream& operator<<( QDataStream & out, const Entry &entry )
+{
+  out << entry.type;
+  out << entry.isOwn;
+  out << entry.id;
+  out << entry.text;
+  out << entry.originalText;
+  out << entry.timestamp;
+  out << entry.localTime;
+  out << entry.hasInReplyToStatusId;
+  out << entry.inReplyToStatusId;
+  out << entry.inReplyToScreenName;
+  out << entry.favorited;
+  out << entry.userInfo;
+  return out;
+}
+
+QDataStream& operator>>( QDataStream & in, Entry &entry )
+{
+  int type;
+  in >> type;
+  in >> entry.isOwn;
+  in >> entry.id;
+  in >> entry.text;
+  in >> entry.originalText;
+  in >> entry.timestamp;
+  in >> entry.localTime;
+  in >> entry.hasInReplyToStatusId;
+  in >> entry.inReplyToStatusId;
+  in >> entry.inReplyToScreenName;
+  in >> entry.favorited;
+  in >> entry.userInfo;
+  entry.type = (Entry::Type) type;
+  return in;
+}
+
+QDataStream& operator>>( QDataStream & in, Status &status )
+{
+  int state;
+  in >> status.entry;
+  in >> status.image;
+  in >> state;
+  status.state = (StatusModel::StatusState) state;
+  return in;
+}
+
 class StatusListPrivate
 {
 public:
@@ -47,9 +101,9 @@ const int StatusListPrivate::publicMaxCount = 20;
 int StatusListPrivate::maxCount = 0;
 
 StatusList::StatusList( const QString &login , TwitterAPI::SocialNetwork network, QObject *parent ) :
-    QObject( parent )
+    QObject( parent ),
+    d( new StatusListPrivate )
 {
-  d = new StatusListPrivate;
   d->network = network;
   d->login = login;
 }
@@ -57,7 +111,6 @@ StatusList::StatusList( const QString &login , TwitterAPI::SocialNetwork network
 StatusList::~StatusList()
 {
   delete d;
-  d = 0;
 }
 
 bool StatusList::hasUnread()
@@ -111,6 +164,10 @@ bool StatusList::isVisible() const
 void StatusList::setData( int index, const Status &status )
 {
   d->data[ index ] = status;
+  if ( status.state == StatusModel::STATE_ACTIVE ) {
+    d->active = index;
+//    emit stateChanged( index );
+  }
   emit dataChanged( index );
 }
 
@@ -123,6 +180,9 @@ void StatusList::setState( int index, StatusModel::StatusState state )
 {
   if ( d->data[ index ].state == state )
     return;
+
+  if ( d->data[ index ].state == StatusModel::STATE_ACTIVE )
+    d->active = -1;
 
   d->data[ index ].state = state;
 
@@ -148,9 +208,20 @@ const QList<Status>& StatusList::getData() const
   return d->data;
 }
 
+void StatusList::setStatuses( const QList<Status> &statuses )
+{
+  d->data = statuses;
+}
+
+
 int StatusList::active() const
 {
   return d->active;
+}
+
+void StatusList::setActive( int active )
+{
+  d->active = active;
 }
 
 int StatusList::size() const
@@ -187,6 +258,9 @@ int StatusListPrivate::addStatus( Entry entry )
     }
   }
   if ( data.size() < maxCount ) {
+    if ( data.at( data.size() - 1 ).state != StatusModel::STATE_UNREAD ) {
+      status.state = StatusModel::STATE_READ;
+    }
     data.append( status );
     return data.size() - 1;
   }
@@ -225,7 +299,7 @@ void StatusList::setFavorited( quint64 id, bool favorited )
 
 bool StatusList::remove( int from, int count )
 {
-  if ( d->data.size() < from + count )
+  if ( d->data.size() < from )
     return false;
 
   for ( int i = count - 1; i >= 0; --i )

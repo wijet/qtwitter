@@ -42,18 +42,16 @@
 #include "configfile.h"
 #include "core.h"
 #include "mainwindow.h"
-#include "twitpicview.h"
 #include "updater.h"
 
 extern ConfigFile settings;
 
 
-Settings::Settings( MainWindow *mainwinSettings, Core *coreSettings, TwitPicView *twitpicviewSettings, QWidget *parent ) :
+Settings::Settings( MainWindow *mainwinSettings, Core *coreSettings, QWidget *parent ) :
     QDialog( parent ),
     updateAccountsOnExit( false ),
     mainWindow( mainwinSettings ),
-    core( coreSettings ),
-    twitPicView( twitpicviewSettings )
+    core( coreSettings )
 {
   // Sorry, but this has to be here and not in Qtwitter::Qtwitter() for the core to be aware
   // of the signal emitted in Settings::Settings()
@@ -577,11 +575,6 @@ void Settings::createUrlShortenerMenu()
     Switches application's UI language to specified by \a index. Invokes
     retranslateUi() for all the widgets, including self.
     \param index Indicates a requested language by a language combo box's current index.
-*/
-
-/*! \fn void Settings::slotPublicTimelineSyncChanged( bool isEnabled )
-    Applies timeline setting change made from a login window to a settings file.
-    \param isEnabled Indicates whether public timeline downloading is enabled now.
 */
 
 /*! \fn void Settings::setAuthDataInDialog( const QAuthenticator &authData )

@@ -30,6 +30,7 @@
 #include "statuslist.h"
 
 class QAbstractItemModel;
+class QStringList;
 class MainWindow;
 class ImageDownload;
 class TwitPicEngine;
@@ -55,7 +56,6 @@ public:
   Core( MainWindow *parent = 0 );
   virtual ~Core();
 
-  void applySettings();
   bool setTimerInterval( int msecs );
 #ifdef Q_WS_X11
   void setBrowserPath( const QString& path );
@@ -65,6 +65,7 @@ public:
   void setModelData( TwitterAPI::SocialNetwork network, const QString &login );
 
   void setSettingsOpen( bool open );
+  QStringList twitpicLogins() const;
 
 public slots:
   void forceGet();
@@ -83,20 +84,20 @@ public slots:
   void shortenUrl( const QString &url );
   void resetRequestsCount();
 
+  void applySettings();
+
 
   void retranslateUi();
 
 signals:
-  void accountsUpdated( const QList<Account> &accounts, int isPublicTimelineRequested );
+  void accountsUpdated( const QList<Account> &accounts );
   void errorMessage( const QString &message );
   void twitPicResponseReceived();
   void twitPicDataSendProgress(qint64,qint64);
-  void requestListRefresh( bool isPublicTimeline, bool isSwitchUser);
   void requestStarted();
   void resetUi();
   void pauseIcon();
   void timelineUpdated();
-  void directMessagesSyncChanged( bool b );
   void modelChanged( StatusModel *model );
   void addReplyString( const QString &user, quint64 id );
   void addRetweetString( QString message );
@@ -106,6 +107,8 @@ signals:
   void resizeData( int width, int oldWidth );
   void newRequest();
   void urlShortened( const QString &url);
+
+  void accountDialogClosed( bool success );
 
 private slots:
   void createAccounts( QWidget *view );
@@ -127,13 +130,14 @@ private slots:
   void setWaitForAccounts( bool wait );
   void markEverythingAsRead();
 
+  void addAccount();
+
 private:
   void destroyDontAsk( TwitterAPI::SocialNetwork network, const QString &login, quint64 id, Entry::Type type );
   void setupStatusLists();
   void checkUnreadStatuses();
   bool retryAuthorizing( Account *account, int role );
   bool authDialogOpen;
-  int publicTimeline;
   int requestCount;
   int tempModelCount;
 

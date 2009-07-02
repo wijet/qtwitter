@@ -1,66 +1,58 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Dominik Kapusta       <d@ayoy.net>         *
- *   Copyright (C) 2009 by Anna Nowak           <wiorka@gmail.com>         *
  *                                                                         *
- *   This library is free software; you can redistribute it and/or modify  *
+ *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU Lesser General Public License as        *
  *   published by the Free Software Foundation; either version 2.1 of      *
  *   the License, or (at your option) any later version.                   *
  *                                                                         *
- *   This library is distributed in the hope that it will be useful,       *
+ *   This program is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU     *
  *   Lesser General Public License for more details.                       *
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
- *   License along with this library; if not, write to                     *
+ *   License along with this program; if not, write to                     *
  *   the Free Software Foundation, Inc.,                                   *
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA          *
  ***************************************************************************/
 
 
-#ifndef ENTRY_H
-#define ENTRY_H
+#ifndef NEWACCOUNTDIALOG_H
+#define NEWACCOUNTDIALOG_H
 
-#include <QMetaType>
-#include <QDateTime>
-#include <QDataStream>
-#include "twitterapi_global.h"
-#include "userinfo.h"
+#include <QtGui/QDialog>
 
+namespace Ui {
+  class NewAccountDialog;
+}
 
-struct TWITTERAPI_EXPORT Entry
+class NewAccountDialog : public QDialog
 {
-  enum Type {
-    Status,
-    DirectMessage
-  };
+  Q_OBJECT
 
-  Entry( Entry::Type entryType = Entry::Status );
+  Q_PROPERTY( int network READ network );
+  Q_PROPERTY( QString login READ login );
+  Q_PROPERTY( QString password READ password );
 
-  void initialize();
-  bool checkContents();
+public:
+  NewAccountDialog( QWidget *parent = 0 );
+  ~NewAccountDialog();
 
-  bool operator == ( const Entry &other );
+  int network() const;
+  QString login() const;
+  QString password() const;
 
-  Type type;
-  bool isOwn;
-  quint64 id;
-  QString text;
-  QString originalText;
-  QDateTime timestamp;
-  QDateTime localTime;
-  bool hasInReplyToStatusId;
-  quint64 inReplyToStatusId;
-  QString inReplyToScreenName;
-  bool favorited;
-  UserInfo userInfo;
+protected:
+  void changeEvent(QEvent *e);
+
+#ifdef OAUTH
+private slots:
+  void toggleEdits( int index );
+#endif
+
+private:
+  Ui::NewAccountDialog *m_ui;
 };
 
-Q_DECLARE_METATYPE(Entry)
-
-//TWITTERAPI_EXPORT QDataStream& operator<<( QDataStream &out, const Entry &entry );
-//TWITTERAPI_EXPORT QDataStream& operator>>( QDataStream &in, Entry &entry );
-
-
-#endif //ENTRY_H
+#endif // NEWACCOUNTDIALOG_H

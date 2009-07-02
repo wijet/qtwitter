@@ -48,17 +48,6 @@ QString Account::networkToString( TwitterAPI::SocialNetwork network )
   }
 }
 
-const Account Account::publicTimeline( TwitterAPI::SocialNetwork network )
-{
-  Account account;
-  account.isEnabled = true;
-  account.network = network;
-  account.login = TwitterAPI::PUBLIC_TIMELINE;
-  account.password = "";
-  account.directMessages = false;
-  return account;
-}
-
 QString Account::toString() const
 {
   return QString( "%1 @ %2" ).arg( login, networkToString( network ) );
@@ -86,7 +75,36 @@ bool Account::operator==( const Account &other ) const
 
 bool Account::operator<( const Account &other ) const
 {
-  if ( network != other.network )
-    return network < other.network;
-  return login < other.login;
+#if QT_VERSION >= 0x040500
+  int compare = login.localeAwareCompare( other.login );
+#else
+  int compare = login.compare( other.login );
+#endif
+  if ( compare != 0 )
+    return compare < 0;
+  return network < other.network;
+}
+
+QDataStream& operator<<( QDataStream & out, const Account &account )
+{
+  out << (qint8) account.isEnabled;
+  out << (qint8) account.network;
+  out << account.login;
+  out << (qint8) account.directMessages;
+  return out;
+}
+
+QDataStream& operator>>( QDataStream & in, Account &account )
+{
+  qint8 en;
+  qint8 network;
+  qint8 dm;
+  in >> en;
+  in >> network;
+  in >> account.login;
+  in >> dm;
+  account.isEnabled = (bool) en;
+  account.network = (TwitterAPI::SocialNetwork) network;
+  account.directMessages = (bool) dm;
+  return in;
 }

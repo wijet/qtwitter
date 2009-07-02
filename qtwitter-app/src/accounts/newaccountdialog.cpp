@@ -18,30 +18,60 @@
  ***************************************************************************/
 
 
-#ifndef CONFIGFILE_H
-#define CONFIGFILE_H
+#include "newaccountdialog.h"
+#include "ui_newaccountdialog.h"
+#include <twitterapi/twitterapi_global.h>
 
-#include <QSettings>
-
-class Account;
-
-class ConfigFile : public QSettings
+NewAccountDialog::NewAccountDialog( QWidget *parent ) :
+    QDialog( parent ),
+    m_ui(new Ui::NewAccountDialog)
 {
-public:
-  ConfigFile();
-
-  static const QString APP_VERSION;
-
-  static QString pwHash( const QString &text );
-  void addAccount( int id, const Account &account );
-  void deleteAccount( int id, int rowCount );
+  m_ui->setupUi( this );
 #ifdef OAUTH
-  void removeOldTwitterAccounts();
+  connect( m_ui->comboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(toggleEdits(int)) );
+  toggleEdits( 0 );
+#endif
+}
+
+NewAccountDialog::~NewAccountDialog()
+{
+  delete m_ui;
+}
+
+int NewAccountDialog::network() const
+{
+  return m_ui->comboBox->currentIndex();
+}
+
+QString NewAccountDialog::login() const
+{
+  return m_ui->loginEdit->text();
+}
+
+QString NewAccountDialog::password() const
+{
+  return m_ui->passwordEdit->text();
+}
+
+#ifdef OAUTH
+void NewAccountDialog::toggleEdits( int index )
+{
+  bool enabled = ( index != TwitterAPI::SOCIALNETWORK_TWITTER );
+  m_ui->loginEdit->setEnabled( enabled );
+  m_ui->loginLabel->setEnabled( enabled );
+  m_ui->passwordEdit->setEnabled( enabled );
+  m_ui->passwordLabel->setEnabled( enabled );
+}
 #endif
 
-private:
-  void convertSettingsToZeroSix();
-  void convertSettingsToZeroSeven();
-};
-
-#endif // CONFIGFILE_H
+void NewAccountDialog::changeEvent(QEvent *e)
+{
+  QDialog::changeEvent(e);
+  switch (e->type()) {
+  case QEvent::LanguageChange:
+    m_ui->retranslateUi(this);
+    break;
+  default:
+    break;
+  }
+}

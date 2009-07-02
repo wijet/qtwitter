@@ -44,9 +44,9 @@ public:
   StatusListView* getListView();
   int getScrollBarWidth();
 
-  
+
 public slots:
-  void setupAccounts( const QList<Account> &accounts, int isPublicTimelineRequested );
+  void setupAccounts( const QList<Account> &accounts );
   void changeListBackgroundColor( const QColor &newColor );
   void popupMessage( QString message );
   void popupError( const QString &message );
@@ -69,7 +69,7 @@ public slots:
 
 signals:
   void updateStatuses();
-  void openTwitPicDialog();
+  void twitPicRequested();
   void post( TwitterAPI::SocialNetwork network, const QString &login, QString status, quint64 inReplyTo );
   void openBrowser( QUrl address );
   void settingsDialogRequested();
@@ -77,7 +77,6 @@ signals:
   void addRetweetString( QString message );
   void resizeView( int width, int oldWidth );
   void switchModel( TwitterAPI::SocialNetwork network, const QString &login );
-  void switchToPublicTimelineModel( TwitterAPI::SocialNetwork network );
   void shortenUrl( const QString &url );
   void iconStopped();
 
